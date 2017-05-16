@@ -44,7 +44,7 @@ RCT_EXPORT_METHOD(speak:(NSString *)text
         reject(@"no_text", @"No text to speak", nil);
         return;
     }
-    
+
     AVSpeechUtterance *utterance = [[AVSpeechUtterance alloc] initWithString:text];
 
     if(voice) {
@@ -57,9 +57,6 @@ RCT_EXPORT_METHOD(speak:(NSString *)text
         utterance.rate = _defaultRate;
     }
 
-    if (_defaultPitch) {
-        utterance.pitchMultiplier = _defaultPitch;
-    }
 
     [self.synthesizer speakUtterance:utterance];
     resolve([NSNumber numberWithUnsignedLong:utterance.hash]);
@@ -162,26 +159,22 @@ RCT_EXPORT_METHOD(setDefaultRate:(float)rate
 }
 
 RCT_EXPORT_METHOD(setDefaultPitch:(float)pitch
+                  skipTransform:(BOOL *)skipTransform // not used, compatibility with Android native module signature
                   resolve:(RCTPromiseResolveBlock)resolve
                   reject:(RCTPromiseRejectBlock)reject)
 {
-    if(pitch > 0.5 && pitch < 2.0) {
-        _defaultPitch = pitch;
-        resolve(@"success");
-    } else {
-        reject(@"bad_rate", @"Wrong pitch value", nil);
-    }
+    reject(@"bad_pitch", @"not yet implemented on ios platform", nil);
 }
 
 RCT_EXPORT_METHOD(voices:(RCTPromiseResolveBlock)resolve
                   reject:(__unused RCTPromiseRejectBlock)reject)
 {
     NSMutableArray *voices = [NSMutableArray new];
-    
+
     for (AVSpeechSynthesisVoice *voice in [AVSpeechSynthesisVoice speechVoices]) {
         [voices addObject:@{@"id": voice.identifier, @"name": voice.name, @"language": voice.language}];
     }
-    
+
     resolve(voices);
 }
 
@@ -190,8 +183,8 @@ RCT_EXPORT_METHOD(voices:(RCTPromiseResolveBlock)resolve
     if(_ducking) {
         [[AVAudioSession sharedInstance] setActive:YES error:nil];
     }
-    
-    [self sendEventWithName:@"tts-start" body:@{@"utteranceId":[NSNumber numberWithUnsignedLong:utterance.hash]}];
+
+    [self sendEventWithName:@"tts-start" body:@{@"utterance":utterance.speechString}];
 }
 
 -(void)speechSynthesizer:(AVSpeechSynthesizer *)synthesizer didFinishSpeechUtterance:(AVSpeechUtterance *)utterance
@@ -199,17 +192,16 @@ RCT_EXPORT_METHOD(voices:(RCTPromiseResolveBlock)resolve
     if(_ducking) {
         [[AVAudioSession sharedInstance] setActive:NO error:nil];
     }
-    
-    [self sendEventWithName:@"tts-finish" body:@{@"utteranceId":[NSNumber numberWithUnsignedLong:utterance.hash]}];
-}
+
+    [self sendEventWithName:@"tts-finish" body:@{@"utterance":utterance.speechString}];}
 
 -(void)speechSynthesizer:(AVSpeechSynthesizer *)synthesizer didPauseSpeechUtterance:(AVSpeechUtterance *)utterance
 {
     if(_ducking) {
         [[AVAudioSession sharedInstance] setActive:NO error:nil];
     }
-    
-    [self sendEventWithName:@"tts-pause" body:@{@"utteranceId":[NSNumber numberWithUnsignedLong:utterance.hash]}];
+
+    [self sendEventWithName:@"tts-pause" body:@{@"utterance":utterance.speechString}];
 }
 
 -(void)speechSynthesizer:(AVSpeechSynthesizer *)synthesizer didContinueSpeechUtterance:(AVSpeechUtterance *)utterance
@@ -217,8 +209,8 @@ RCT_EXPORT_METHOD(voices:(RCTPromiseResolveBlock)resolve
     if(_ducking) {
         [[AVAudioSession sharedInstance] setActive:YES error:nil];
     }
-    
-    [self sendEventWithName:@"tts-resume" body:@{@"utteranceId":[NSNumber numberWithUnsignedLong:utterance.hash]}];
+
+    [self sendEventWithName:@"tts-resume" body:@{@"utterance":utterance.speechString}];
 }
 
 -(void)speechSynthesizer:(AVSpeechSynthesizer *)synthesizer willSpeakRangeOfSpeechString:(NSRange)characterRange utterance:(AVSpeechUtterance *)utterance
@@ -226,16 +218,15 @@ RCT_EXPORT_METHOD(voices:(RCTPromiseResolveBlock)resolve
     [self sendEventWithName:@"tts-progress"
                        body:@{@"location": [NSNumber numberWithUnsignedLong:characterRange.location],
                               @"length": [NSNumber numberWithUnsignedLong:characterRange.length],
-                              @"utteranceId": [NSNumber numberWithUnsignedLong:utterance.hash]}];
-}
+                              @"utterance":utterance.speechString}];}
 
 -(void)speechSynthesizer:(AVSpeechSynthesizer *)synthesizer didCancelSpeechUtterance:(AVSpeechUtterance *)utterance
 {
     if(_ducking) {
         [[AVAudioSession sharedInstance] setActive:NO error:nil];
     }
-    
-    [self sendEventWithName:@"tts-cancel" body:@{@"utteranceId":[NSNumber numberWithUnsignedLong:utterance.hash]}];
+
+    [self sendEventWithName:@"tts-cancel" body:@{@"utterance":utterance.speechString}];
 }
 
 @end
