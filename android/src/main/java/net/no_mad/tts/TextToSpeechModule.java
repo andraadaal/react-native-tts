@@ -87,7 +87,7 @@ public class TextToSpeechModule extends ReactContextBaseJavaModule {
     }
 
     @ReactMethod
-    public void speak(String utterance, Promise promise) {
+    public void speak(String utterance, String utteranceId, Promise promise) {
         if(notReady(promise)) return;
 
         if(ducking) {
@@ -104,7 +104,6 @@ public class TextToSpeechModule extends ReactContextBaseJavaModule {
             }
         }
 
-        String utteranceId = Integer.toString(utterance.hashCode());
         int speakResult = speak(utterance, utteranceId);
         if(speakResult == TextToSpeech.SUCCESS) {
             promise.resolve(utteranceId);
